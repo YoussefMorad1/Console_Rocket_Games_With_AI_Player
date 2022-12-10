@@ -3,6 +3,7 @@
 #include <conio.h>
 #include <vector>
 #include <algorithm>
+#include <map>
 
 using namespace std;
 
@@ -46,6 +47,7 @@ class Board {
     vector<char> row_col_names;
     Player *p1, *p2; // player 1 UP, player2 LEFT
     int computer_player; // 0 -> no computer player , 1 -> player1 is computer , 2 -> player 2 is computer
+    vector<vector<char>> myVec;
 
     char idx_to_row_symbol(int idx);
 
@@ -62,6 +64,15 @@ class Board {
     void restart_game();
 
 public:
+    vector<vector<char>>& get_board_as_vector(){
+        for (int i = 0; i < sz; ++i) {
+            for (int j = 0; j < sz; ++j) {
+                myVec[i][j] = ptr[i][j];
+            }
+        }
+        return myVec;
+    }
+
     void print();
 
     Board(int n = 5, int computer_player = 0, char symbol1 = 'v', char symbol2 = '>');
@@ -100,6 +111,8 @@ public:
 class Computer_Player : public Player {
     Board *board;
 
+    map<vector<vector<char>>, char> mp;
+
     bool is_good_state(Player *, Player *);
 
     bool is_bad_state(Player *, Player *);
@@ -130,8 +143,10 @@ bool Computer_Player::is_good_state(Player *curPlayer, Player *opponent) {
     else
         return is_bad_state(opponent, curPlayer);
 }
-
 char Computer_Player::find_good_move(Player *curPlayer, Player *opponent) {
+    char& ret = mp[board->get_board_as_vector()];
+    if(ret != 0)
+        return ret;
 
     vector<char> names = board->get_row_col_names();
     for (char &x: names) {
@@ -143,11 +158,11 @@ char Computer_Player::find_good_move(Player *curPlayer, Player *opponent) {
 //        board -> print();
         if (is_good_state(curPlayer, opponent)) {
             board->undo_move(curPlayer, x);
-            return x;
+            return ret =  x;
         }
         board->undo_move(curPlayer, x);
     }
-    return '*';
+    return ret = '*';
 }
 
 char Computer_Player::get_move(bool first) {
@@ -195,7 +210,10 @@ Board::Board(int n, int computer_player, char symbol1, char symbol2)
         ptr[i] = new char[n];
     }
 
-
+    myVec.resize(sz);
+    for (int i = 0; i < sz; ++i) {
+        myVec[i].resize(sz);
+    }
 
     if (computer_player == 1 || computer_player == 3)
         p1 = new Computer_Player(symbol1, 'u', this);
@@ -439,7 +457,7 @@ void Board::play() {
         }
     }
 }
-
+// note when you put AI with no valid moves it crashes
 int main() {
     Board game(5, 1);
     game.play();
