@@ -111,7 +111,7 @@ public:
 class Computer_Player : public Player {
     Board *board;
 
-    map<vector<vector<char>>, char> mp;
+    map<vector<vector<char>>, char> mp[2];
 
     bool is_good_state(Player *, Player *);
 
@@ -144,7 +144,7 @@ bool Computer_Player::is_good_state(Player *curPlayer, Player *opponent) {
         return is_bad_state(opponent, curPlayer);
 }
 char Computer_Player::find_good_move(Player *curPlayer, Player *opponent) {
-    char& ret = mp[board->get_board_as_vector()];
+    char& ret = mp[curPlayer->get_side()=='u'][board->get_board_as_vector()];
     if(ret != 0)
         return ret;
 
