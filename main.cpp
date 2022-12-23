@@ -64,7 +64,7 @@ class Board {
     void restart_game();
 
 public:
-    vector<vector<char>>& get_board_as_vector(){
+    vector<vector<char>> &get_board_as_vector() {
         for (int i = 0; i < sz; ++i) {
             for (int j = 0; j < sz; ++j) {
                 myVec[i][j] = ptr[i][j];
@@ -100,7 +100,7 @@ public:
 
     bool is_winner(Player *p);
 
-    bool found_valid_move(Player* p);
+    bool found_valid_move(Player *p);
 
     void play();
 
@@ -111,7 +111,7 @@ public:
 class Computer_Player : public Player {
     Board *board;
 
-    map<vector<vector<char>>, char> mp[2];
+    map<vector<vector<char>>, pair<int, char>> mp[2];
 
     bool is_good_state(Player *, Player *);
 
@@ -121,7 +121,7 @@ public:
     Computer_Player(char symbol, char side, Board *board) : Player(symbol, side), board(board) {
     }
 
-    char find_good_move(Player *, Player *);
+    pair<int, char> find_good_move(Player *, Player *);
 
     virtual char get_move(bool first = true);
 
@@ -129,7 +129,9 @@ public:
 };
 
 
-bool Computer_Player::is_bad_state(Player *curPlayer, Player *opponent) {
+/* old AI algorithm 
+
+ bool Computer_Player::is_bad_state(Player *curPlayer, Player *opponent) {
     if (board->is_winner(opponent)) // extra condition (already handeled in is_good_state)
         return true;
     if (find_good_move(curPlayer, opponent) == '*')
@@ -185,6 +187,90 @@ char Computer_Player::get_move(bool first) {
     }
     // not reachable as I call this function only when a move is guaranteed
     return '*';
+}
+
+ */
+
+char is_it[5][5] = {{'@', '.', '.', '.', '@'},
+                    {'.', '>', 'v', 'v', '.'},
+                    {'.', '.', '>', '.', '.'},
+                    {'.', '.', '>', '.', '.'},
+                    {'@', 'v', '.', '.', '@'}};
+
+// choosing the best_move out of all no good moves
+// getting the number of good_moves
+
+// الفرق بين النود اللي هاخدها بين أقرانها
+// وبين إزاي هقارن بينها وبين أقرانها
+// the sum of ways to win from this state the bigger is better
+// always maxmizing? or it's sum of children?
+
+// choose the node with the "maximum" score "sum of children"
+
+pair<int, char> Computer_Player::find_good_move(Player *curPlayer, Player *opponent) {
+    pair<int, char> &ret = mp[curPlayer->get_side() == 'u'][board->get_board_as_vector()];
+    if (ret.second != 0)
+        return ret;
+
+    if (board->is_winner(curPlayer))// || !board->found_valid_move(opponent))
+        return ret = make_pair(1, '*');
+    if (board->is_winner(opponent))// || !board->found_valid_move(curPlayer))
+        return ret = make_pair(-1, '*');
+
+
+    vector<char> names = board->get_row_col_names();
+    int best_next_move_score = INT_MIN, current_state_score = 0;
+    char next_move = 0;
+    for (char &x: names) {
+        // if no move can be done here continue
+        if (board->get_next_move(x, curPlayer->get_side()) == -1)
+            continue;
+        board->make_move(curPlayer, x, true);
+        /* checking a specific state
+        bool ok = 1;
+        for (int i = 0; i < 5; ++i) {
+            for (int j = 0; j < 5; ++j) {
+                if(board->get_board_as_vector()[i][j] != is_it[i][j])
+                    ok = 0;
+            }
+        }
+        if(ok){
+            board->print();
+        }
+        */
+        int score = -1 * find_good_move(opponent, curPlayer).first;
+        current_state_score += score;
+        board->undo_move(curPlayer, x);
+        if (score > best_next_move_score) {
+            best_next_move_score = score;
+            next_move = x;
+        }
+    }
+    pair<int, char> res = make_pair(current_state_score, next_move);
+//    res.first = current_state_score;
+//    res.second = (next_move == 0 ? '*' : next_move);
+    return ret = res;
+}
+
+char Computer_Player::get_move(bool first) {
+    Player *opponent;
+    if (this->get_side() == 'u')
+        opponent = board->get_player2();
+    else
+        opponent = board->get_player1();
+
+    pair<int, char> res = find_good_move(this, opponent);
+
+    return res.second;
+
+//    // choose any valid move if no one is good
+//    vector<char> names = board->get_row_col_names();
+//    for (char &x: names) {
+//        if (board->get_next_move(x, side) != -1)
+//            return x;
+//    }
+//    // not reachable as I call this function only when a move is guaranteed
+//    return '*';
 }
 
 void Board::draw_init_board() {
@@ -373,8 +459,8 @@ bool Board::is_winner(Player *p) {
 
 
 char Board::get_input(Player *p, bool first) {
-    if(!found_valid_move(p))
-        return  '*';
+    if (!found_valid_move(p))
+        return '*';
     char ch = p->get_move(first);
     if (!is_valid_row_name(ch)) {
         if (first)
@@ -384,9 +470,9 @@ char Board::get_input(Player *p, bool first) {
     return ch;
 }
 
-bool Board::found_valid_move(Player*p){
-    for(char& x : get_row_col_names()){
-        if(get_next_move(x, p->get_side()) != -1)
+bool Board::found_valid_move(Player *p) {
+    for (char &x: get_row_col_names()) {
+        if (get_next_move(x, p->get_side()) != -1)
             return true;
     }
     return false;
@@ -438,8 +524,9 @@ void Board::play() {
         for (Player *p: players) {
             cout << "Player " << (p->get_side() == 'u' ? "1 v" : "2 >") << " Turn..\n";
             char ch = get_input(p);
-            if(ch == '*') {
-                cout << "No Valid Move for " << "Player " << (p->get_side() == 'u' ? "1 v" : "2 >") << ".. This turn will be skipped\n";
+            if (ch == '*') {
+                cout << "No Valid Move for " << "Player " << (p->get_side() == 'u' ? "1 v" : "2 >")
+                     << ".. This turn will be skipped\n";
                 _sleep(350);
                 continue;
             }
@@ -457,6 +544,7 @@ void Board::play() {
         }
     }
 }
+
 // note when you put AI with no valid moves it crashes
 int main() {
     Board game(5, 1);
