@@ -129,7 +129,7 @@ public:
 };
 
 
-/* old AI algorithm 
+/* old AI algorithm
 
  bool Computer_Player::is_bad_state(Player *curPlayer, Player *opponent) {
     if (board->is_winner(opponent)) // extra condition (already handeled in is_good_state)
